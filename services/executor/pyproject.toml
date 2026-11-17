@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synctax-executor"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+authors = [
+  { name = "Aryan Singh" }
+]
+dependencies = [
+  "anthropic==2.3.0",
+  "bullmq==3.4.6",
+  "docker==7.2.0",
+  "lizard==1.24.3",
+  "prometheus-client==0.26.0",
+  "pydantic==2.14.2",
+  "redis==8.1.0",
+  "ruff==0.17.3",
+  "structlog==26.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "fakeredis[lua]==2.40.0",
+  "mypy==2.4.1",
+  "pytest==9.2.0",
+  "ruff==0.17.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "docker: needs a real Docker daemon and the sandbox images",
+  "redis: needs a real Redis server at TEST_REDIS_URL",
+]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+explicit_package_bases = true
+mypy_path = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["bullmq.*", "docker.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "RUF"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S603", "S607", "S108"]
+"src/executor/review_eval.py" = ["E501"]

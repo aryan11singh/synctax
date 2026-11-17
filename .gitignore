@@ -1,0 +1,11 @@
+node_modules/
+dist/
+loadtest/results/targets.json
+coverage/
+.env
+.env.*
+!.env.example
+!.env.prod.example
+packages/db/src/generated/
+test-results/
+playwright-report/

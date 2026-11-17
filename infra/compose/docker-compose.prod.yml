@@ -1,0 +1,148 @@
+# The application host. Running code stays off unless docker-compose.executor-link.yml is added,
+# because sandboxes must never share a machine with the database. See docs/deployment.md.
+#
+# IMAGE_PREFIX and IMAGE_TAG select prebuilt images, which small servers should use: building the
+# web app needs more memory than most of them have.
+name: synctax
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: synctax
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: synctax
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [private]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U synctax']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks: [private]
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  migrate:
+    image: ${IMAGE_PREFIX:-synctax}/migrate:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: packages/db/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://synctax:${POSTGRES_PASSWORD}@postgres:5432/synctax
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [private]
+
+  api:
+    image: ${IMAGE_PREFIX:-synctax}/api:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env.prod
+    environment:
+      DATABASE_URL: postgresql://synctax:${POSTGRES_PASSWORD}@postgres:5432/synctax
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      COOKIE_SECURE: 'true'
+      TRUST_PROXY_HOPS: '1'
+      EXECUTION_ENABLED: 'false'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks: [private]
+
+  collab:
+    image: ${IMAGE_PREFIX:-synctax}/collab:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/collab/Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env.prod
+    environment:
+      DATABASE_URL: postgresql://synctax:${POSTGRES_PASSWORD}@postgres:5432/synctax
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      ALLOWED_ORIGINS: https://${DOMAIN}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks: [private]
+
+  nginx:
+    image: ${IMAGE_PREFIX:-synctax}/web:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    volumes:
+      # The whole folder, because live/ holds symlinks into archive/.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on: [api, collab]
+    networks: [private, public]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    extra_hosts:
+      - 'executor:${EXECUTOR_PRIVATE_IP:-127.0.0.1}'
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [private]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    # Reach it through an SSH tunnel. It is not published through Nginx.
+    ports:
+      - '127.0.0.1:3001:3000'
+    networks: [private]
+
+networks:
+  private: {}
+  public: {}
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
