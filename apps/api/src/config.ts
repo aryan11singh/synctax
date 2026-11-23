@@ -5,22 +5,24 @@ const optional = z
   .optional()
   .transform((value) => (value ? value : undefined))
 
+const defaultSecret = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(0).max(65535).default(3000),
   DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1),
-  ACCESS_TOKEN_SECRET: z.string().min(32),
-  COLLAB_TOKEN_SECRET: z.string().min(32),
-  INVITE_TOKEN_SECRET: z.string().min(32),
-  OAUTH_STATE_SECRET: z.string().min(32),
-  INTERNAL_SERVICE_TOKEN: z.string().min(32),
-  PUBLIC_WEB_URL: z.url(),
-  PUBLIC_API_URL: z.url(),
-  SMTP_URL: z.string().min(1),
-  MAIL_FROM: z.string().min(1),
+  REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
+  ACCESS_TOKEN_SECRET: z.string().default(defaultSecret),
+  COLLAB_TOKEN_SECRET: z.string().default(defaultSecret),
+  INVITE_TOKEN_SECRET: z.string().default(defaultSecret),
+  OAUTH_STATE_SECRET: z.string().default(defaultSecret),
+  INTERNAL_SERVICE_TOKEN: z.string().default(defaultSecret),
+  PUBLIC_WEB_URL: z.string().default('https://synctax.vercel.app'),
+  PUBLIC_API_URL: z.string().default('https://synctax-ldez.onrender.com'),
+  SMTP_URL: z.string().default('smtp://localhost:25'),
+  MAIL_FROM: z.string().default('noreply@synctax.dev'),
   COOKIE_SECURE: z.enum(['true', 'false']).default('true'),
-  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
-  EXECUTION_ENABLED: z.enum(['true', 'false']).default('true'),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
+  EXECUTION_ENABLED: z.enum(['true', 'false']).default('false'),
   GITHUB_CLIENT_ID: optional,
   GITHUB_CLIENT_SECRET: optional,
   GOOGLE_CLIENT_ID: optional,

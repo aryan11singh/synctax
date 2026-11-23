@@ -1,12 +1,14 @@
 import { COMPACTION, SNAPSHOTS } from '@synctax/shared'
 import { z } from 'zod'
 
+const defaultSecret = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(0).max(65535).default(4000),
   DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1),
-  COLLAB_TOKEN_SECRET: z.string().min(32),
-  ALLOWED_ORIGINS: z.string().min(1),
+  REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
+  COLLAB_TOKEN_SECRET: z.string().default(defaultSecret),
+  ALLOWED_ORIGINS: z.string().default('https://synctax.vercel.app,*'),
   LOG_LEVEL: z.string().default('info'),
 })
 
