@@ -7,7 +7,7 @@ const collabUrl = (): string => {
   const envCollab = import.meta.env.VITE_COLLAB_URL as string | undefined
   if (envCollab) return envCollab
   if (typeof location !== 'undefined' && location.hostname.includes('vercel.app')) {
-    return 'wss://synctax-backend.onrender.com/collab'
+    return 'wss://synctax-ldez.onrender.com/collab'
   }
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/collab`
 }
