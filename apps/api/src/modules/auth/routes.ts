@@ -25,7 +25,7 @@ const PRISMA_UNIQUE_VIOLATION = 'P2002'
 
 const email = z.email().max(254).toLowerCase()
 // The upper bound stops a huge password being used to tie up Argon2.
-const password = z.string().min(1).max(128)
+const password = z.string().min(10).max(128)
 
 const signupBody = z.object({
   email,

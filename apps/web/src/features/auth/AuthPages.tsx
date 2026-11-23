@@ -148,6 +148,7 @@ export function SignupPage() {
           type="password"
           autoComplete="new-password"
           required
+          minLength={10}
           value={form.password}
           onChange={(event) => setForm({ ...form, password: event.target.value })}
         />
@@ -263,6 +264,7 @@ export function ResetPasswordPage() {
           type="password"
           autoComplete="new-password"
           required
+          minLength={10}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
