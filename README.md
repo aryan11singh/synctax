@@ -28,6 +28,7 @@ A production-ready, real-time collaborative code editor where an entire room typ
 Synctax enables distributed engineering teams to edit complex multi-file projects together in real-time right inside the browser. Edits merge deterministically through Conflict-free Replicated Data Types (**Yjs**), ensuring zero lock contention and seamless offline reconnection.
 
 Surrounding the editor is a full developer suite:
+
 - **Real-Time Presence:** Remote multi-cursor tracking, user focus states, and one-click "follow user across files".
 - **Room Chat & Threads:** Markdown messaging, user mentions (`@user`), typing indicators, and inline code comments pinned with Yjs relative positions.
 - **Snapshot Version History:** Automatic timeline checkpoints, manual named snapshots, side-by-side diffing, and one-click rollback.
@@ -75,6 +76,7 @@ graph TD
 ```
 
 ### Production Service Allocation
+
 1. **Frontend (Vercel):** Single Page Application deployed via `@synctax/web`. Rewrites `/api/v1/:path*` to the Render backend so all auth cookies remain same-origin.
 2. **Unified Backend Container (Render):** Single multi-stage Docker container hosting:
    - **Nginx (Port 10000):** Terminates SSL, injects CORS headers for `*.vercel.app`, proxies `/api` to Fastify, and upgrades `/collab` to WebSockets.
@@ -114,6 +116,7 @@ graph TD
 ## Local Development Setup
 
 ### Prerequisites
+
 - [Node.js 22.12+](https://nodejs.org/)
 - [pnpm 10+](https://pnpm.io/) (`corepack enable`)
 - [Docker & Docker Compose](https://www.docker.com/)
@@ -121,46 +124,58 @@ graph TD
 ### Step-by-Step
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/aryan11singh/synctax.git
    cd synctax
    ```
 
 2. **Install dependencies:**
+
    ```bash
    corepack enable
    pnpm install
    ```
 
 3. **Start local infrastructure (PostgreSQL & Redis):**
+
    ```bash
    docker compose -f infra/compose/docker-compose.dev.yml up -d
    ```
 
 4. **Configure Environment Variables:**
+
    ```bash
    cp apps/api/.env.example apps/api/.env
    cp apps/collab/.env.example apps/collab/.env
    ```
 
 5. **Deploy Database Migrations & Generate Prisma Client:**
+
    ```bash
    DATABASE_URL="postgresql://synctax:synctax@localhost:5432/synctax" pnpm --filter @synctax/db migrate:deploy
    pnpm --filter @synctax/db generate
    ```
 
 6. **Build Packages & Start Development Servers:**
+
    ```bash
    pnpm build
    ```
+
    In separate terminals:
+
    ```bash
    # Terminal 1: REST API (Port 3000)
    pnpm --filter @synctax/api dev
+   ```
 
+   ```bash
    # Terminal 2: Collab WebSocket Server (Port 4000)
    pnpm --filter @synctax/collab dev
+   ```
 
+   ```bash
    # Terminal 3: Web Application (Port 5173)
    pnpm --filter @synctax/web dev
    ```
@@ -192,13 +207,16 @@ pnpm --filter @synctax/web test:e2e
 ## Cloud Deployment Guide
 
 ### 1. Database (Neon)
+
 1. Create a serverless PostgreSQL database on [Neon](https://neon.tech/).
 2. Run database migrations directly:
+
    ```bash
    DATABASE_URL="postgresql://<user>:<password>@<host>/<db>?sslmode=require" npx prisma migrate deploy --schema packages/db/prisma/schema.prisma
    ```
 
 ### 2. Backend (Render)
+
 1. In the [Render Dashboard](https://dashboard.render.com), create a new **Web Service** pointing to this repository.
 2. Select **Docker** as the runtime.
 3. Configure Environment Variables:
@@ -210,12 +228,15 @@ pnpm --filter @synctax/web test:e2e
 4. The service will build via `Dockerfile` and start Nginx, Redis, Fastify, and Collab via `infra/render/start.sh`.
 
 ### 3. Frontend (Vercel)
+
 1. Import the repository on [Vercel](https://vercel.com).
 2. Set the Root Directory to `.` (or `apps/web`).
 3. Set the Build Command to:
+
    ```bash
    node scripts/build-vercel.mjs
    ```
+
 4. Output Directory: `dist`
 5. The included `vercel.json` automatically proxies `/api/v1/:path*` to `https://synctax-ldez.onrender.com/api/v1/:path*`, ensuring seamless authentication and zero CORS issues.
 
