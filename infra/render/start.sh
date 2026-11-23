@@ -4,6 +4,7 @@ set -e
 # Render provides $PORT (typically 10000). Default to 10000 if not present.
 export PORT="${PORT:-10000}"
 export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://neondb_owner:npg_adNUvy03oABM@ep-flat-dew-begx9jfz.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require}"
 
 # Fallback secrets and environment variables if not set in Render dashboard
 SHARED_SECRET=$(openssl rand -hex 32 2>/dev/null || echo '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
@@ -30,12 +31,6 @@ envsubst '${PORT}' < /etc/nginx/templates/synctax.conf.template > /etc/nginx/con
 
 echo "Starting Nginx daemon..."
 nginx
-
-if [ -n "$DATABASE_URL" ] && [ -d "/app/api/prisma" ]; then
-  echo "Applying database migrations..."
-  cd /app/api
-  npx prisma migrate deploy --schema prisma/schema.prisma || echo "Migration warning: proceeding with startup..."
-fi
 
 echo "Starting Synctax REST API (Fastify) on internal port 3000..."
 cd /app/api
