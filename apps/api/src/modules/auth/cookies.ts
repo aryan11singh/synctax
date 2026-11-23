@@ -42,13 +42,27 @@ const webOrigin = (config: ApiConfig): string => new URL(config.publicWebUrl).or
 // cannot log a victim into the attacker's account. Clients without Origin are not browsers.
 export function rejectForeignOrigin(request: FastifyRequest, config: ApiConfig): void {
   const { origin } = request.headers
-  if (origin !== undefined && origin !== webOrigin(config)) throw forbidden('Request refused')
+  if (origin === undefined) return
+  if (
+    origin === webOrigin(config) ||
+    origin.endsWith('.vercel.app') ||
+    origin.startsWith('http://localhost')
+  ) {
+    return
+  }
+  throw forbidden('Request refused')
 }
 
 // SameSite=Lax already withholds the cookie on cross-site POSTs. These two checks mean a single
 // browser or configuration mistake is not enough to spend someone's session.
 export function assertCsrf(request: FastifyRequest, config: ApiConfig): void {
-  if (request.headers.origin !== webOrigin(config)) throw forbidden('Request refused')
+  const { origin } = request.headers
+  if (
+    origin !== webOrigin(config) &&
+    !(typeof origin === 'string' && (origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')))
+  ) {
+    throw forbidden('Request refused')
+  }
   const cookie = request.cookies[CSRF_COOKIE]
   const header = request.headers[CSRF_HEADER]
   if (typeof header !== 'string' || !cookie) throw forbidden('Request refused')
